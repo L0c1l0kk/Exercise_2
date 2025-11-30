@@ -15,6 +15,12 @@ class regtree:
         #Initialization
         X=np.asarray(X)
         y=np.asarray(y)
+
+        if not np.issubdtype(X.dtype, np.number):
+            raise ValueError(
+                f"X contains non-numeric data (dtype: {X.dtype}). "
+                "All features must be numeric. Please encode categorical features before fitting."
+            )
         
         self.dims = tuple(X.shape)
         self.features = np.zeros(2**(max_depth+1) - 1, dtype=int)
@@ -157,4 +163,5 @@ class regtree:
                     stack.append((2*node_idx+1, depth+1, True))
                 else:
                     print(f"{feature_names[self.features[node_idx]]} > {self.boundaries[node_idx]}",end="")
+
             print("\n", end="")
