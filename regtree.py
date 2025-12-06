@@ -28,10 +28,10 @@ class regtree:
             )
         
         self.dims = tuple(X.shape)
-        self.features = np.zeros(2**(max_depth+1) - 1, dtype=int)
-        self.boundaries = np.zeros(2**(max_depth+1) - 1)
-        self.averages = np.zeros(2**(max_depth+1) - 1)
-        self.samples = np.zeros(2**(max_depth+1) - 1, dtype=int)
+        self.features = np.zeros(2**(max_depth+1) - 1, dtype=np.uint16)
+        self.boundaries = np.zeros(2**(max_depth+1) - 1, dtype=np.float32)
+        self.averages = np.zeros(2**(max_depth+1) - 1, dtype=np.float32)
+        self.samples = np.zeros(2**(max_depth+1) - 1, dtype=np.uint16)
         self.samples[0] = self.dims[0]
         
         elements = np.empty(2**(max_depth+1) - 1,dtype=object)
