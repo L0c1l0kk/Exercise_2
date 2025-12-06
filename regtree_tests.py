@@ -13,9 +13,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.tree import DecisionTreeRegressor
 
-# Import Custom implementation
-# from Custom_module import RegressionTree
-
 
 class TestData:
     """Generate various test datasets"""

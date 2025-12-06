@@ -11,111 +11,148 @@ class regtree:
     averages = np.array([])
     samples = np.array([])
     
-    def fit(self, X,y, max_depth:int=3, min_size:int=10, random_features:bool=False):
+    def fit(self, X, y, max_depth: int = 5, min_size: int = 10, random_features: bool = False):
         
-        #Initialization
-        X=np.asarray(X)
-        y=np.asarray(y)
+        # Initialization
+        X = np.asarray(X, dtype=np.float32)
+        y = np.asarray(y, dtype=np.float32)
         
         if np.isnan(X).any():
             warnings.warn("NaN values detected and removed.", RuntimeWarning)
-            X = X[~np.isnan(X).any(axis=1)]
-
+            valid_mask = ~np.isnan(X).any(axis=1)
+            X = X[valid_mask]
+            y = y[valid_mask]
+        
         if not np.issubdtype(X.dtype, np.number):
             raise ValueError(
                 f"X contains non-numeric data (dtype: {X.dtype}). "
                 "All features must be numeric. Please encode categorical features before fitting."
             )
         
-        self.dims = tuple(X.shape)
-        self.features = np.zeros(2**(max_depth+1) - 1, dtype=np.uint16)
-        self.boundaries = np.zeros(2**(max_depth+1) - 1, dtype=np.float32)
-        self.averages = np.zeros(2**(max_depth+1) - 1, dtype=np.float32)
-        self.samples = np.zeros(2**(max_depth+1) - 1, dtype=np.uint16)
-        self.samples[0] = self.dims[0]
+        n_samples, n_features = X.shape
+        self.dims = (n_samples, n_features)
         
-        elements = np.empty(2**(max_depth+1) - 1,dtype=object)
-        elements[0] = np.array([i for i in range(self.dims[0])])
+        max_nodes = 2**(max_depth + 1) - 1
+        self.features = np.full(max_nodes, -1, dtype=np.int16)
+        self.boundaries = np.zeros(max_nodes, dtype=np.float32)
+        self.averages = np.zeros(max_nodes, dtype=np.float32)
+        self.samples = np.zeros(max_nodes, dtype=np.uint16)
+        self.samples[0] = n_samples
         
-        #Loop over levels
-        depth=0
-        while(depth<max_depth):
-            n_leaves=2**depth
-            node_idx_start=n_leaves-1
-            node_idx_end=2*node_idx_start
+        node_masks = np.zeros((max_nodes, n_samples), dtype=bool)
+        node_masks[0, :] = True
+        
+        if random_features:
+            n_random_features = max(1, int(np.sqrt(n_features)))
+        
+        # Loop over levels
+        depth = 0
+        while depth < max_depth:
+            n_leaves = 2**depth
+            node_idx_start = n_leaves - 1
+            node_idx_end = 2 * node_idx_start
             
-            no_splits=True
+            no_splits = True
             
-            #Loop over (current) leaf nodes
+            # Loop over (current) leaf nodes
             for node_idx in range(node_idx_start, node_idx_end + 1):
+                mask = node_masks[node_idx]
                 
-                # Indices of elements in current node
-                elem_indices = elements[node_idx]
-                if elem_indices is None or len(elem_indices) == 0:
+                if(not mask.any()):
                     continue
                 
-                best_split_loss=np.inf
-                best_split=None
+                best_split_loss = np.inf
+                best_split = None
                 
-                #Select features to consider for split (for random forest)
+                # Select features to consider for split (for random forest)
                 if random_features:
-                    feature_indices = np.random.choice(self.dims[1], size=int(np.sqrt(self.dims[1])), replace=False)
+                    feature_indices = np.random.choice(n_features, size=n_random_features, replace=False)
                 else:
-                    feature_indices = range(self.dims[1])
+                    feature_indices = np.arange(n_features)
                 
+                X_node = X[mask]
+                y_node = y[mask]
+                node_size = mask.sum()
                 
-                #Loop over features
+                # Loop over features
                 for col_idx in feature_indices:
+                    feature_vals = X_node[:, col_idx]
                     
-                    #Loop over possible splits and find the best one
-                    unique_values=np.unique(X[elem_indices,col_idx])
-                    for boundary in unique_values:
-                        left_mask = X[elem_indices,col_idx]<=boundary
-                        right_mask = X[elem_indices,col_idx]>boundary
-                        left_indices = elem_indices[left_mask]
-                        right_indices = elem_indices[right_mask]
+                    unique_values = np.unique(feature_vals)
+                    
+                    if len(unique_values) <= 1:
+                        continue
+                    
+                    # Find possible splits
+                    splits = (unique_values[:-1] + unique_values[1:]) / 2
+                    left_masks = feature_vals[:, None] <= splits[None, :]
+                    left_sizes = left_masks.sum(axis=0)
+                    right_sizes = node_size - left_sizes
+                    
+                    valid_splits = (left_sizes >= min_size) & (right_sizes >= min_size)
+                    
+                    if not valid_splits.any():
+                        continue
+                    
+                    valid_indices = np.where(valid_splits)[0]
+                    
+                    #Loop over possible (valid) splits
+                    for idx in valid_indices:
+                        left_mask_local = left_masks[:, idx]
                         
-                        left_size=len(left_indices)
-                        right_size=len(right_indices)
-                        parent_size=len(elem_indices)
+                        y_left = y_node[left_mask_local]
+                        y_right = y_node[~left_mask_local]
                         
-                        if(left_size<min_size or right_size<min_size):
-                            continue
+                        left_size = len(y_left)
+                        right_size = len(y_right)
+                        parent_size = node_size
                         
-                        #Mean squared error loss
-                        mse_left=np.var(y[left_indices])
-                        mse_right=np.var(y[right_indices])
+                        # Mean squared error loss
+                        mse_left = np.var(y_left)
+                        mse_right = np.var(y_right)
                         
-                        #Weighted MSE loss (by size of child node/size of parent node)
-                        loss=left_size/parent_size*mse_left + right_size/parent_size*mse_right
-                        if(loss<best_split_loss):
-                            best_split_loss=loss
-                            best_split=(col_idx,boundary,left_indices,right_indices)
-                            
-                #Perform split if found
-                if(best_split is not None):
-                    feature, boundary, left_indices, right_indices = best_split
+                        # Weighted MSE loss (by size of child node/size of parent node)
+                        loss = left_size / parent_size * mse_left + right_size / parent_size * mse_right
+                        
+                        if loss < best_split_loss:
+                            best_split_loss = loss
+                            best_split = (col_idx, splits[idx], left_mask_local)
+                
+                # Perform split if found
+                if best_split is not None:
+                    feature, boundary, left_mask_local = best_split
                     
                     self.features[node_idx] = feature
                     self.boundaries[node_idx] = boundary
-                    self.samples[2*node_idx+1] = len(left_indices)
-                    self.samples[2*node_idx+2] = len(right_indices)
-                    elements[2*node_idx+1] = left_indices
-                    elements[2*node_idx+2] = right_indices
-                    no_splits=False
+                    
+                    global_left_mask = mask.copy()
+                    global_left_mask[mask] = left_mask_local
+                    
+                    global_right_mask = mask.copy()
+                    global_right_mask[mask] = ~left_mask_local
+                    
+                    node_masks[2 * node_idx + 1] = global_left_mask
+                    node_masks[2 * node_idx + 2] = global_right_mask
+                    self.samples[2 * node_idx + 1] = global_left_mask.sum()
+                    self.samples[2 * node_idx + 2] = global_right_mask.sum()
+                    
+                    no_splits = False
                 else:
                     self.features[node_idx] = -1
-                    self.averages[node_idx] = np.mean(y[elem_indices])
-            if(no_splits):
-                break
-            depth+=1
+                    self.averages[node_idx] = np.mean(y_node)
+                    node_masks[2 * node_idx + 1] = False
+                    node_masks[2 * node_idx + 2] = False
+            
+            depth += 1
+            
             # Set node averages for leaf nodes at max depth
-            if(depth==max_depth):
+            if no_splits or depth == max_depth:
                 for node_idx in range(node_idx_start, node_idx_end + 1):
-                    elem_indices = elements[node_idx]
-                    if elem_indices is not None and len(elem_indices) > 0:
+                    if node_masks[node_idx].any():
                         self.features[node_idx] = -1
-                        self.averages[node_idx] = np.mean(y[elem_indices])
+                        self.averages[node_idx] = np.mean(y[node_masks[node_idx]])
+            if no_splits:
+                break
     
     
     
