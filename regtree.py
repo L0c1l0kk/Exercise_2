@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import warnings
 
 class regtree:
     
@@ -10,11 +11,15 @@ class regtree:
     averages = np.array([])
     samples = np.array([])
     
-    def fit(self, X,y, max_depth:int=3, min_size:int=10):
+    def fit(self, X,y, max_depth:int=3, min_size:int=10, random_features:bool=False):
         
         #Initialization
         X=np.asarray(X)
         y=np.asarray(y)
+        
+        if np.isnan(X).any():
+            warnings.warn("NaN values detected and removed.", RuntimeWarning)
+            X = X[~np.isnan(X).any(axis=1)]
 
         if not np.issubdtype(X.dtype, np.number):
             raise ValueError(
@@ -52,8 +57,15 @@ class regtree:
                 best_split_loss=np.inf
                 best_split=None
                 
+                #Select features to consider for split (for random forest)
+                if random_features:
+                    feature_indices = np.random.choice(self.dims[1], size=int(np.sqrt(self.dims[1])), replace=False)
+                else:
+                    feature_indices = range(self.dims[1])
+                
+                
                 #Loop over features
-                for col_idx in range(self.dims[1]):
+                for col_idx in feature_indices:
                     
                     #Loop over possible splits and find the best one
                     unique_values=np.unique(X[elem_indices,col_idx])
