@@ -5,7 +5,7 @@ from regtree import regtree
 import warnings
 
 class RandomForestRegressor:
-    def __init__(self, n_trees:int=100, max_depth:int=5, min_size:int=3, n_jobs:int=-1):
+    def __init__(self, n_trees:int=100, max_depth:int=5, min_size:int=1, n_jobs:int=-1):
         self.n_trees = n_trees
         self.max_depth = max_depth
         self.min_size = min_size
