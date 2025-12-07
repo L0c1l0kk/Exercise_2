@@ -14,14 +14,18 @@ class regtree:
     def fit(self, X, y, max_depth: int = 5, min_size: int = 10, random_features: bool = False):
         
         # Initialization
-        X = np.asarray(X, dtype=np.float32)
-        y = np.asarray(y, dtype=np.float32)
+        X = np.asarray(X)
+        y = np.asarray(y)
         
+        #Input validation
         if np.isnan(X).any():
             warnings.warn("NaN values detected and removed.", RuntimeWarning)
             valid_mask = ~np.isnan(X).any(axis=1)
             X = X[valid_mask]
             y = y[valid_mask]
+        
+        X=X.astype(np.float32)
+        y=y.astype(np.float32)
         
         if not np.issubdtype(X.dtype, np.number):
             raise ValueError(
@@ -153,6 +157,7 @@ class regtree:
                         self.averages[node_idx] = np.mean(y[node_masks[node_idx]])
             if no_splits:
                 break
+        return self
     
     
     

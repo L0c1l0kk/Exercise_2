@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from joblib import Parallel, delayed
 from regtree import regtree
+import warnings
 
 class RandomForestRegressor:
     def __init__(self, n_trees:int=100, max_depth:int=5, min_size:int=3, n_jobs:int=-1):
@@ -12,14 +13,38 @@ class RandomForestRegressor:
         self.trees = []
 
     def fit(self, X, y):
-        bootstrap_indices = np.random.choice(len(X), size=(self.n_trees, len(X)), replace=True)
+        
+        X = np.asarray(X)
+        y = np.asarray(y)
+        
+        #Input validation
+        if np.isnan(X).any():
+            warnings.warn("NaN values detected and removed.", RuntimeWarning)
+            valid_mask = ~np.isnan(X).any(axis=1)
+            X = X[valid_mask]
+            y = y[valid_mask]
+        
+        X=X.astype(np.float32)
+        y=y.astype(np.float32)
+        
+        if not np.issubdtype(X.dtype, np.number):
+            raise ValueError(
+                f"X contains non-numeric data (dtype: {X.dtype}). "
+                "All features must be numeric. Please encode categorical features before fitting."
+            )
+            
+        
         self.trees = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._fit_single_tree)(X[bootstrap_indices[i]], y[bootstrap_indices[i]]) for i in range(self.n_trees)
+            delayed(self._fit_single_tree)(X, y,i) for i in range(self.n_trees)
         )
+        return self
 
-    def _fit_single_tree(self, X, y):
+    def _fit_single_tree(self, X, y,seed):
         tree = regtree()
-        tree.fit(X, y, max_depth=self.max_depth, min_size=self.min_size, random_features=True)
+        
+        np.random.seed(seed)
+        bootstrap_indices = np.random.choice(len(X), size= len(X), replace=True)
+        tree.fit(X[bootstrap_indices], y[bootstrap_indices], max_depth=self.max_depth, min_size=self.min_size, random_features=True)
         return tree
 
     def predict(self, X):
