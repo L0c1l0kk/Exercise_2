@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from joblib import Parallel, delayed
-from regtree import regtree
+from decision_tree_regressor import DecisionTreeRegressor
 import warnings
 
 class RandomForestRegressor:
@@ -40,7 +40,7 @@ class RandomForestRegressor:
         return self
 
     def _fit_single_tree(self, X, y,seed):
-        tree = regtree()
+        tree = DecisionTreeRegressor()
         
         np.random.seed(seed)
         bootstrap_indices = np.random.choice(len(X), size= len(X), replace=True)

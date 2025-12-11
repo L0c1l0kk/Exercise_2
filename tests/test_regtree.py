@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.tree import DecisionTreeRegressor
+from models.decision_tree_regressor import DecisionTreeRegressor as RegressionTree
 
 
 class TestData:
@@ -428,8 +429,6 @@ def run_all_tests(tree_class):
 
 # Example usage
 if __name__ == "__main__":
-    
-    from regtree import regtree as RegressionTree
     run_all_tests(RegressionTree)
     
     print("Import Custom RegressionTree class and run:")

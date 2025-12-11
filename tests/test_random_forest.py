@@ -5,7 +5,7 @@ from sklearn.datasets import make_regression, make_friedman1
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor as SklearnRF
-from RandomForestRegressor import RandomForestRegressor
+from models.random_forest_regressor import RandomForestRegressor
 
 
 class TestRandomForest:
