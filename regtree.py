@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import warnings
 
@@ -163,8 +162,6 @@ class regtree:
     
     
     def predict(self, X):
-        if isinstance(X, pd.DataFrame):
-            X = X.values
         X = np.asarray(X)
     
         predictions = np.zeros(len(X))
