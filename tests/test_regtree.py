@@ -12,6 +12,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.tree import DecisionTreeRegressor
+
+import sys
+from pathlib import Path
+root_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(root_dir))
 from models.decision_tree_regressor import DecisionTreeRegressor as RegressionTree
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 from joblib import Parallel, delayed
-from decision_tree_regressor import DecisionTreeRegressor
+from models.decision_tree_regressor import DecisionTreeRegressor
 import warnings
 
 class RandomForestRegressor:

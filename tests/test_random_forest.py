@@ -5,6 +5,11 @@ from sklearn.datasets import make_regression, make_friedman1
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor as SklearnRF
+
+import sys
+from pathlib import Path
+root_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(root_dir))
 from models.random_forest_regressor import RandomForestRegressor
 
 
@@ -153,7 +158,7 @@ class TestVisualization:
         X_sin = np.random.rand(300, 1) * 10
         y_sin = np.sin(X_sin[:, 0]) * 5 + np.random.randn(300) * 0.5
         
-        rf_custom_sin = RandomForestRegressor(n_trees=100, max_depth=15)
+        rf_custom_sin = RandomForestRegressor(n_trees=100, max_depth=15, min_size=3)
         rf_custom_sin.fit(X_sin, y_sin)
         rf_sklearn_sin = SklearnRF(n_estimators=100, max_depth=15, random_state=42)
         rf_sklearn_sin.fit(X_sin, y_sin)
